@@ -1,9 +1,12 @@
 ﻿
 #include <iostream>
-#include <WinSock2.h>
+#include "Server.h"
+#include "Console.h"
 
 int main()
 {
-    std::cout << "Hello World!\n";
+    Console console;
+    console.loop();
+    system("pause");
 }
 
