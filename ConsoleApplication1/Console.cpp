@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <string>
+#include <thread>
 #include "Server.h"
 
 
@@ -18,12 +19,12 @@ void Console::loop(void)
 		args = split_line(line);											 //Чтение строки с аргументами
 		launch(args);														 //Выполнение комманды с аргументами
 
-		std::cout << "line: " << line << std::endl;
-		std::cout << "command:" << launch(args) << std::endl;
-		std::cout << "args: " << *args << std::endl;
+		//std::cout << "line: " << line << std::endl;
+		//std::cout << "command:" << launch(args) << std::endl;
+		//std::cout << "args: " << *args << std::endl;
 		free(line);
 		free(args);
-	} while (stat);
+	} while (1);
 }
 
 //Чтение строки, возвращает массив символов строки
@@ -89,9 +90,28 @@ char** Console::split_line(char* line)
 }
 
 bool Console::launch(char** args) {
-	char* command = args[1];
-	if (command == "ServerStart")
+
+	if (args[0] == 0)
+		return 1;
+
+	std::string command = args[0];
+
+
+	if (command == "ServerStart") {
 		std::cout << "Starting server..." << std::endl;
 		server.open();
-	return 1;
+		return 1;
+	}
+	else if (command == "exit" || command == "Exit" || command == "Quit")
+	{
+		exit(1);
+	}
+	else if (command == "pass" || command == "Pass")
+	{
+		return 1;
+	}
+	else if (command == "Clear" || command == "cls")
+	{
+		system("cls");
+	}
 }

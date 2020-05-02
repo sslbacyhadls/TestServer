@@ -1,24 +1,47 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include "Server.h"
 #include <WinSock2.h>
+#include <WS2tcpip.h>
 #include <iostream>
 
+SServer::SServer() {
+    system("color FC");
+}
+
+//Создаёт сессию и открывает сокет
+// return 1 -- Success
+// return 0 -- Fail
+
+
+bool SServer::open()
+{
+    if (openingSession() == 1 &&                                                                      //Открытие сессии
+        localBind("50000", "127.0.0.1") == 1)                                                           //Связывание сокета и адреса
+    {
+        handlerInit();
+        std::cout << "[SUCCESS] Server opened!" << std::endl;
+        return 1;
+    }
+    else
+        std::cout << "[ERROR] with opening server" << std::endl;
+    return 0;
+
+};
 
 
 
 //Создаёт сессию
-// return 0 -- Success
-// return 1 -- Fail
+// return 1 -- Success
+// return 0 -- Fail
 
 bool SServer::openingSession() {
     if (FAILED(WSAStartup(MAKEWORD(1, 1), &WsData))) {
         std::cout << "Error with WS opening!" << std::endl;
-        return 1;
+        return 0;
     }
     else {
-        std::cout << "Succesfully opened WS" << std::endl;
-        std::cout << WsData.iMaxSockets << std::endl;
-        return 0;
+        std::cout << "[SUCCESS] Succesfully opened WS" << std::endl;
+        return 1;
     };
 };
 
@@ -26,50 +49,68 @@ bool SServer::openingSession() {
 
 //Задаёт параметры адреса
 //Связывает адрес с сокетом
-// return 0 -- Success
-// return 1 -- Fail
+// return 1 -- Success
+// return 0 -- Fail
 
-bool SServer::localBind(unsigned int port, const char addr[15]) 
+bool SServer::localBind(const char* port, const char addr[15]) 
 {
     
-    sAddr.sin_family = AF_INET;                                                             //Тип адреса (def = TCP/IP)
+    //sAddr.sin_family = AF_INET;                                                             //Тип адреса (def = TCP/IP)
   
-    sAddr.sin_port = htons(port);                                                           //Порт
+    //sAddr.sin_port = htons((int)port);                                                           //Порт
 
-    sAddr.sin_addr.S_un.S_addr = inet_addr(addr);                                           //Адрес
+    //sAddr.sin_addr.S_un.S_addr = inet_addr(addr);                                           //Адрес
 
-    LSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);                                    //
-    if (LSocket == SOCKET_ERROR) {                                                          // Задание сокета
-        std::cout << "Socket not inicialised!" << std::endl;                                //
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    int status;
+
+
+    if (status = getaddrinfo(NULL, port, &hints, &res) != 0)
+    {
+        std::cout << "[ERROR]: " << WSAGetLastError() << "Get Address Info failed.\n";
+    };
+
+    if (status != 0)
+    {
+        std::cout << "[ERROR]: " << status << " Unable to get address info for Port " << port << "." << std::endl;
+        return false;
     }
-    else  std::cout << "Socket inicialised!" << std::endl;                                                                                      //
 
-    if (bind(LSocket, (struct sockaddr*) & sAddr, sizeof(sAddr) != SOCKET_ERROR)) {         //Связывание сокета и адреса
-        std::cout << "Socket binded!" << std::endl;         
+    LSocket = socket(res->ai_family, res->ai_socktype, res->ai_protocol);                   //
+    if (LSocket == INVALID_SOCKET) {                                                        // Задание сокета
+        std::cout << "Socket not inicialised!" << std::endl;                                //
+    }                                                                                       //
+    else
+    {
+        std::cout << "[SUCCESS] Socket inicialised!" << std::endl;                                  //
+    }
+
+
+    if (bind(LSocket, res->ai_addr, res->ai_addrlen != SOCKET_ERROR)) {         //Связывание сокета и адреса
+        std::cout << "[SUCCESS] Socket binded!" << std::endl;         
     } else  std::cout << "Socket not binded!" << std::endl;
 
-    if (listen(LSocket, SOMAXCONN) != SOCKET_ERROR) {                                       //Включение слушателя
-        std::cout << "Socket listening!" << std::endl;
+    freeaddrinfo(res);
+
+    if (listen(LSocket, 5) != SOCKET_ERROR) 
+    {                                      
+        std::cout << "[SUCCESS] Socket listening!" << std::endl;                                     //Включение слушателя
+        WSocket = LSocket;
+        return 1;
+    }
+    else {
+        std::cout << "[ERROR] Listen: " << WSAGetLastError() << std::endl;
+        closesocket(LSocket);
         return 0;
     }
-        return 1;
+
 }
 
 
 
-//Создаёт сессию и открывает сокет
-// return 0 -- Success
-// return 1 -- Fail
-
-
-
-bool SServer::open() 
-{
-    openingSession();                                                                      //Открытие сессии
-    localBind(88888, "127.0.0.1");                                                         //Связывание сокета и адреса       
-    handler();
-    return 0;
-};                                                              
 
 
 
@@ -85,9 +126,8 @@ bool SServer::close()
 
 //Установка соединения с клиентом
 
-bool SServer::handler() 
+void SServer::handler() 
 {
-
     int sizeCAddr = sizeof(cAddr);
 
     while (true) 
@@ -99,7 +139,13 @@ bool SServer::handler()
         }
 
     }
-    return 0;
 };
 
+//Инициализация потока соединения с клиентом
 
+bool SServer::handlerInit()
+{
+    handlerThread = std::thread(&SServer::handler, this);
+    std::cout << "Handler thread created" << std::endl << "Thread ID: " << handlerThread.get_id() << std::endl;
+    return 1;
+}
