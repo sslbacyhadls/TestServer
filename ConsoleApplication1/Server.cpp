@@ -15,6 +15,7 @@ SServer::SServer() {
 
 bool SServer::open()
 {
+    std::cout << "Starting server..." << std::endl;
     if (openingSession() == 1 &&                                                                      //Открытие сессии
         localBind("50000", "127.0.0.1") == 1)                                                           //Связывание сокета и адреса
     {
@@ -54,13 +55,6 @@ bool SServer::openingSession() {
 
 bool SServer::localBind(const char* port, const char addr[15]) 
 {
-    
-    //sAddr.sin_family = AF_INET;                                                             //Тип адреса (def = TCP/IP)
-  
-    //sAddr.sin_port = htons((int)port);                                                           //Порт
-
-    //sAddr.sin_addr.S_un.S_addr = inet_addr(addr);                                           //Адрес
-
     hints.ai_flags = AI_PASSIVE;
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
@@ -95,8 +89,13 @@ bool SServer::localBind(const char* port, const char addr[15])
 
     freeaddrinfo(res);
 
-    if (listen(LSocket, 5) != SOCKET_ERROR) 
-    {                                      
+
+}
+
+
+bool SServer::listenS() {
+    if (listen(LSocket, 5) != SOCKET_ERROR)
+    {
         std::cout << "[SUCCESS] Socket listening!" << std::endl;                                     //Включение слушателя
         WSocket = LSocket;
         return 1;
@@ -106,23 +105,36 @@ bool SServer::localBind(const char* port, const char addr[15])
         closesocket(LSocket);
         return 0;
     }
+}
 
+bool SServer::listenStop() {
+    listen(LSocket, 0);
+    return 1;
 }
 
 
-
-
-
-
-//Пока не реализован
+//Закрываем все сокеты и подключения
 
 bool SServer::close() 
 {
-
-    return 0;
+    if (isListening != 1) {
+        if (WSocket != INVALID_SOCKET)
+        {
+            std::cout << "Closing server...";
+            closesocket(WSocket);
+        }
+        if (LSocket != INVALID_SOCKET)
+        {
+            closesocket(LSocket);
+        }
+        return 1;
+    }
+    else
+    {
+        std::cout << "[ERROR] Socket is listening";
+        return 0;
+    };
 };
-
-
 
 //Установка соединения с клиентом
 

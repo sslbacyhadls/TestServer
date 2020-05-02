@@ -17,5 +17,4 @@ private:
 	char* line;
 	char** args;
 	int stat;
-	
 };
